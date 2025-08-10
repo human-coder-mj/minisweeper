@@ -1,6 +1,4 @@
-# Minisweeper (Terminal)
-
-A tiny terminal Minesweeper clone written in pure Python 3. No external dependencies.
+# Just for Fun
 
 ## Features
 - Configurable width, height, and mine count
