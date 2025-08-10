@@ -18,6 +18,7 @@ import argparse
 import random
 from dataclasses import dataclass
 from typing import List, Tuple, Iterable
+from difficulty import get_difficulty, list_difficulties
 
 
 @dataclass
@@ -159,10 +160,12 @@ class Board:
 
 
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Minisweeper - tiny terminal Minesweeper")
-    p.add_argument("--width", type=int, default=9)
-    p.add_argument("--height", type=int, default=9)
-    p.add_argument("--mines", type=int, default=10)
+    choices = ", ".join(sorted(list_difficulties().keys()))
+    p = argparse.ArgumentParser(description=f"Minisweeper - tiny terminal Minesweeper. Difficulties: {choices}")
+    p.add_argument("--width", type=int, default=9, help="Board width (overridden by --difficulty)")
+    p.add_argument("--height", type=int, default=9, help="Board height (overridden by --difficulty)")
+    p.add_argument("--mines", type=int, default=10, help="Mines count (overridden by --difficulty)")
+    p.add_argument("--difficulty", "-d", type=str, default=None, help=f"Preset difficulty: {choices}")
     return p.parse_args()
 
 
@@ -177,8 +180,15 @@ def print_help() -> None:
 def main() -> None:
     ns = parse_args()
     random.seed()
-    board = Board(ns.width, ns.height, ns.mines)
-    print("Minisweeper - type 'h' for help. Coordinates are 0-indexed (x y).\n")
+    if ns.difficulty:
+        diff = get_difficulty(ns.difficulty)
+        w, h, m = diff.width, diff.height, diff.mines
+        banner = f"Minisweeper [{diff.name}] - type 'h' for help. Coordinates are 0-indexed (x y).\n"
+    else:
+        w, h, m = ns.width, ns.height, ns.mines
+        banner = "Minisweeper - type 'h' for help. Coordinates are 0-indexed (x y).\n"
+    board = Board(w, h, m)
+    print(banner)
     while True:
         print(board.render())
         cmd = input("> ").strip()

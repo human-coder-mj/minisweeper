@@ -15,6 +15,7 @@ from tkinter import ttk, messagebox
 from typing import Dict, Tuple
 
 from minisweeper import Board
+from difficulty import get_difficulty, list_difficulties
 
 # UI constants
 GAME_OVER_TITLE = "Game Over"
@@ -49,23 +50,33 @@ class MinesweeperApp(tk.Tk):
         top = ttk.Frame(self, padding=(8, 8))
         top.grid(row=0, column=0, sticky="ew")
 
-        ttk.Label(top, text="Width:").grid(row=0, column=0, padx=(0, 4))
+        # Difficulty chooser
+        ttk.Label(top, text="Difficulty:").grid(row=0, column=0, padx=(0, 4))
+        self.diff_var = tk.StringVar(value="custom")
+        diff_values = ["custom"] + sorted(list_difficulties().keys())
+        self.diff_combo = ttk.Combobox(
+            top, textvariable=self.diff_var, values=diff_values, width=10, state="readonly"
+        )
+        self.diff_combo.grid(row=0, column=1, padx=(0, 12))
+        self.diff_combo.bind("<<ComboboxSelected>>", self.on_difficulty_changed)
+
+        ttk.Label(top, text="Width:").grid(row=0, column=2, padx=(0, 4))
         self.width_var = tk.IntVar(value=width)
         w_spin = ttk.Spinbox(top, from_=2, to=60, textvariable=self.width_var, width=5)
-        w_spin.grid(row=0, column=1, padx=(0, 8))
+        w_spin.grid(row=0, column=3, padx=(0, 8))
 
-        ttk.Label(top, text="Height:").grid(row=0, column=2, padx=(0, 4))
+        ttk.Label(top, text="Height:").grid(row=0, column=4, padx=(0, 4))
         self.height_var = tk.IntVar(value=height)
         h_spin = ttk.Spinbox(top, from_=2, to=40, textvariable=self.height_var, width=5)
-        h_spin.grid(row=0, column=3, padx=(0, 8))
+        h_spin.grid(row=0, column=5, padx=(0, 8))
 
-        ttk.Label(top, text="Mines:").grid(row=0, column=4, padx=(0, 4))
+        ttk.Label(top, text="Mines:").grid(row=0, column=6, padx=(0, 4))
         self.mines_var = tk.IntVar(value=mines)
         m_spin = ttk.Spinbox(top, from_=1, to=2000, textvariable=self.mines_var, width=6)
-        m_spin.grid(row=0, column=5, padx=(0, 8))
+        m_spin.grid(row=0, column=7, padx=(0, 8))
 
-        ttk.Button(top, text="New", command=self.new_game_from_inputs).grid(row=0, column=6, padx=(0, 8))
-        ttk.Button(top, text="Reset", command=self.reset_game).grid(row=0, column=7)
+        ttk.Button(top, text="New", command=self.new_game_from_inputs).grid(row=0, column=8, padx=(0, 8))
+        ttk.Button(top, text="Reset", command=self.reset_game).grid(row=0, column=9)
 
         self.status_var = tk.StringVar(value="")
         status = ttk.Label(self, textvariable=self.status_var, padding=(8, 0))
@@ -79,19 +90,41 @@ class MinesweeperApp(tk.Tk):
 
     # --- Game management ---
     def new_game_from_inputs(self):
-        try:
-            w = int(self.width_var.get())
-            h = int(self.height_var.get())
-            m = int(self.mines_var.get())
-        except Exception:
-            messagebox.showerror("Invalid input", "Width, height, and mines must be integers.")
-            return
+        # Use difficulty if selected; otherwise use custom inputs
+        diff_name = self.diff_var.get().strip().lower()
+        if diff_name != "custom":
+            try:
+                diff = get_difficulty(diff_name)
+            except Exception as e:
+                messagebox.showerror("Invalid difficulty", str(e))
+                return
+            w, h, m = diff.width, diff.height, diff.mines
+        else:
+            try:
+                w = int(self.width_var.get())
+                h = int(self.height_var.get())
+                m = int(self.mines_var.get())
+            except Exception:
+                messagebox.showerror("Invalid input", "Width, height, and mines must be integers.")
+                return
         self.new_game(w, h, m)
 
     def reset_game(self):
         if self.board is None:
             return
         self.new_game(self.board.w, self.board.h, self.board.mine_target)
+
+    def on_difficulty_changed(self, event=None):
+        name = self.diff_var.get()
+        if name and name.lower() != "custom":
+            try:
+                d = get_difficulty(name)
+            except Exception:
+                return
+            # Update spinboxes to reflect preset
+            self.width_var.set(d.width)
+            self.height_var.set(d.height)
+            self.mines_var.set(d.mines)
 
     def new_game(self, width: int, height: int, mines: int):
         try:
